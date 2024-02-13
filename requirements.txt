@@ -13,7 +13,7 @@ IPython
 tqdm
 neo
 elephant
-sklearn
+scikit-learn
 xgboost
 torch
 seaborn
