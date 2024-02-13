@@ -18,3 +18,4 @@ sklearn
 xgboost
 torch
 seaborn
+allensdk
