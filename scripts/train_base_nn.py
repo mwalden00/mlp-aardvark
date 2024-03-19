@@ -39,13 +39,11 @@ if __name__ == "__main__":
         )[:, :100, :]
         y = torch.Tensor(np.concatenate(data["pupil area"])).reshape(100, 150)[:, :100]
 
-        X_train = X[:70]
-        X_test = X[80:]
-        X_val = X[70:80]
+        X_train = X[:60]
+        X_val = X[60:]
 
-        y_train = y[:70]
-        y_test = y[80:]
-        y_val = y[70:80]
+        y_train = y[:60]
+        y_val = y[60:]
 
         loss = nn.MSELoss()
 
@@ -57,32 +55,26 @@ if __name__ == "__main__":
 
         if ens:
             affix = args.nn_type.split("_")[1]
-            f = open("../models/regression_models/initial_cv" + affix + ".pkl", "rb")
+            f = open("../models/regression_models/initial_cv/" + affix + ".pkl", "rb")
             reg = pkl.load(f)
             train_shape = (X_train.shape[0] * X_train.shape[1], 13)
             reg.fit(
                 X_train.reshape(*train_shape).cpu(),
                 y_train.reshape(train_shape[0]).cpu(),
             )
+            val_shape = (X_val.shape[0] * X_val.shape[1], 13)
 
             if pipe:
-                test_shape = (X_test.shape[0] * X_test.shape[1], 13)
-                val_shape = (X_val.shape[0] * X_val.shape[1], 13)
                 X_train = torch.Tensor(
-                    reg.predict(X_train.reshape(*train_shape).cpu())
-                    .reshape(X_train.shape[:2])
-                    .to(device=device)
-                )
-                X_test = torch.Tensor(
-                    reg.predict(X_test.reshape(*test_shape).cpu())
-                    .reshape(X_test.shape[:2])
-                    .to(device=device)
-                )
+                    reg.predict(X_train.reshape(*train_shape).cpu()).reshape(
+                        list(X_train.shape)[:2] + [1]
+                    )
+                ).to(device=device)
                 X_val = torch.Tensor(
-                    reg.predict(X_val.reshape(*val_shape).cpu())
-                    .reshape(X_val.shape[:2])
-                    .to(device=device)
-                )
+                    reg.predict(X_val.reshape(*val_shape).cpu()).reshape(
+                        list(X_val.shape)[:2] + [1]
+                    )
+                ).to(device=device)
                 in_dim = 1
             else:
                 lin = nn.Linear(2, 1)
@@ -110,9 +102,42 @@ if __name__ == "__main__":
             optimizer, T_max=num_epochs, eta_min=2e-5
         )
 
-        train_loss = []
-        test_loss = []
+        train_losses = []
+        val_losses = []
 
-        for epoch in tqdm.tqdm(range(num_epochs)):
-            print("wahoo")
-            out = model.forward(X_train)
+        best_val_loss = np.inf
+
+        with tqdm.tqdm(range(num_epochs)) as pbar:
+            for epoch in pbar:
+                # Train data + Optim
+                # print(X_train.shape)
+                out = model.forward(X_train).reshape(*y_train.shape)
+                if ens and not pipe:
+                    ens_out = reg.predict(X_train.reshape(*train_shape))
+                    true_out = lin(torch.stack((out, ens_out), axis=1))
+
+                optimizer.zero_grad()
+
+                l_train = loss(out, y_train)
+                l_train.backward()
+
+                optimizer.step()
+                lr_schedular.step()
+
+                train_losses.append(l_train.cpu().item())
+
+                # Validation data
+                out = model.forward(X_val).reshape(*y_val.shape)
+
+                l_val = loss(out, y_val)
+
+                val_losses.append(l_val.cpu().item())
+                pbar.set_description(
+                    "Train loss: {:.4f} | Val loss: {:.4f}".format(l_train, l_val)
+                )
+
+        np.array(train_losses).tofile(args.exp + "_train_loss.csv", sep=",")
+        np.array(val_losses).tofile(args.exp + "_val_loss.csv", sep=",")
+
+        with open(f"../models/nn_models/{args.exp}.pkl", "wb") as f:
+            pkl.dump(model, f)

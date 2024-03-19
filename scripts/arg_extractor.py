@@ -50,7 +50,7 @@ def get_args():
         help="Total number of epochs for model training",
     )
     parser.add_argument(
-        "--experiment_name",
+        "--exp",
         nargs="?",
         type=str,
         default="exp_1",

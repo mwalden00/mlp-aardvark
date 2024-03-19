@@ -23,6 +23,7 @@ class base_LSTM(nn.Module):
         dropout=0.0,
         bi_d=False,
         batch_first=True,
+        ens_model=None,
     ):
         """
         @params
@@ -31,7 +32,7 @@ class base_LSTM(nn.Module):
         - int num_lstm_layers: number of LSTM layers
         - in out_dim: output feature dimensionality
         - bool bias: Whether to include bias
-        - float dropoutL: Dropout probability
+        - float dropout: Dropout probability
         - bool bi_d: Bidirectional Input
         - bool batch_first: Dimension ordering of batched (i.e. (batches x seq. length x features) as opposed to (seq. length x batches x features))
         """
@@ -45,6 +46,7 @@ class base_LSTM(nn.Module):
         self.bi_d = bi_d
         self.bias = bias
         self.batch_first = batch_first
+        self.ens_model = ens_model
 
         self.lstm = nn.LSTM(
             input_size=in_dim,

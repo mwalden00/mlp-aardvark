@@ -27,8 +27,6 @@ pupil_lists = copy.deepcopy(bucket_lists)
 for i, buckets in enumerate(bucket_lists):
     pupil_lists[i] = get_nearest_val(buckets, pupil_data)
 
-pupil_lists = robust_scale(pupil_lists, axis=1)
-
 traj_pupil_data = {"trajectories": traj_data, "pupil area": pupil_lists}
 with open("../data/processed/traj_and_pupil_data.pkl", "wb") as f:
     pkl.dump(traj_pupil_data, f)
