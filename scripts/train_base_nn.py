@@ -106,7 +106,7 @@ if __name__ == "__main__":
         optimizer = optim.Adam(
             model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=False
         )
-        lr_schedular = optimizer.lr_scheduler.CosineAnnealingLR(
+        lr_schedular = optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=num_epochs, eta_min=2e-5
         )
 
