@@ -68,17 +68,17 @@ if __name__ == "__main__":
             if pipe:
                 test_shape = (X_test.shape[0] * X_test.shape[1], 13)
                 val_shape = (X_val.shape[0] * X_val.shape[1], 13)
-                X_train = (
+                X_train = torch.Tensor(
                     reg.predict(X_train.reshape(*train_shape).cpu())
                     .reshape(X_train.shape[:2])
                     .to(device=device)
                 )
-                X_test = (
+                X_test = torch.Tensor(
                     reg.predict(X_test.reshape(*test_shape).cpu())
                     .reshape(X_test.shape[:2])
                     .to(device=device)
                 )
-                X_val = (
+                X_val = torch.Tensor(
                     reg.predict(X_val.reshape(*val_shape).cpu())
                     .reshape(X_val.shape[:2])
                     .to(device=device)
@@ -98,7 +98,7 @@ if __name__ == "__main__":
             out_dim=1,
             bias=bias,
             dropout=dropout,
-        )
+        ).to(device)
 
         # Adam Params
         weight_decay = args.weight_decay_coefficient
