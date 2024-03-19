@@ -114,4 +114,5 @@ if __name__ == "__main__":
         test_loss = []
 
         for epoch in tqdm.tqdm(range(num_epochs)):
+            print("wahoo")
             out = model.forward(X_train)
