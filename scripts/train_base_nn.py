@@ -1,10 +1,4 @@
-from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
-from sklearn.pipeline import Pipeline
-from xgboost import XGBRegressor
 from sklearn.linear_model import Ridge
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_squared_error
 import pickle as pkl
 import numpy as np
 import torch
@@ -57,6 +51,7 @@ if __name__ == "__main__":
             affix = args.nn_type.split("_")[1]
             f = open("../models/regression_models/initial_cv/" + affix + ".pkl", "rb")
             reg = pkl.load(f)
+            f.close()
             train_shape = (X_train.shape[0] * X_train.shape[1], 13)
             reg.fit(
                 X_train.reshape(*train_shape).cpu(),
