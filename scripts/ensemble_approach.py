@@ -1,8 +1,10 @@
 import pickle as pkl
+from xgboost import XGBRegressor
 from sklearn.ensemble import RandomForestRegressor
 import torch
 import numpy as np
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import GridSearchCV
 
 
 def get_model(path):
@@ -10,8 +12,7 @@ def get_model(path):
         return pkl.load(f)
 
 
-ens_reg = RandomForestRegressor(n_estimators=100)
-reg_ens_reg = RandomForestRegressor(n_estimators=100)
+reg_ens_reg = XGBRegressor(n_estimators=100)
 
 xgb = get_model("../models/regression_models/initial_cv/xgb.pkl")
 ridge = get_model("../models/regression_models/initial_cv/ridge.pkl")
@@ -92,6 +93,7 @@ def get_stacked_data_pred(X_train, X_train_reg, y_train_reg):
             y_train_reg_pred_rf.detach().numpy(),
             y_train_reg_pred_xgb.detach().numpy(),
             y_train_reg_pred_ridge.detach().numpy(),
+            np.arange(y_train_reg.shape[0]),
         ),
         axis=1,
     )
@@ -99,7 +101,26 @@ def get_stacked_data_pred(X_train, X_train_reg, y_train_reg):
     return stacked_y_train
 
 
+hyperparameter_grid = {
+    "n_estimators": [50, 100, 500, 1000, 2000],
+    "max_depth": [3, 6, 9, 12, None],
+}
+
+ens_cv = GridSearchCV(
+    estimator=RandomForestRegressor(),
+    param_grid=hyperparameter_grid,
+    cv=3,
+    scoring="neg_mean_absolute_error",
+    n_jobs=-1,
+    verbose=5,
+    return_train_score=True,
+)
+
 stacked_y_train = get_stacked_data_pred(X_train, X_train_reg, y_train_reg)
+
+ens_cv.fit(stacked_y_train, y_train_reg)
+
+ens_reg = ens_cv.best_estimator_
 ens_reg.fit(stacked_y_train, y_train_reg)
 reg_ens_reg.fit(stacked_y_train[:, 4:], y_train_reg)
 
@@ -107,6 +128,8 @@ stacked_y_val = get_stacked_data_pred(X_val, X_val_reg, y_val_reg)
 y_val_pred = ens_reg.predict(stacked_y_val)
 y_val_pred_reg = reg_ens_reg.predict(stacked_y_val[:, 4:])
 
+with open("../models/ensemble.pkl", "wb") as f:
+    pkl.dump(ens_reg, f)
 
-print("Ensemble MSE:", mean_squared_error(y_val_reg, y_val_pred))
-print("Reg. Only Ensemble:", mean_squared_error(y_val_reg, y_val_pred_reg))
+print("Ensemble MSE:", mean_absolute_error(y_val_reg, y_val_pred))
+print("Reg. Only Ensemble:", mean_absolute_error(y_val_reg, y_val_pred_reg))

@@ -4,8 +4,8 @@ import numpy as np
 import torch
 from torch import nn
 import torch.optim as optim
-import mlp_nn
-from arg_extractor import get_args
+import src.mlp_nn as mlp_nn
+from src.arg_extractor import get_args
 import tqdm
 
 with open("../data/processed/traj_and_pupil_data.pkl", "rb") as f:
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         y_train = y[:60]
         y_val = y[60:]
 
-        loss = nn.MSELoss()
+        loss = nn.L1Loss()
 
         reg_ens = Ridge()
         pipe = args.nn_type[:4] == "pipe"
