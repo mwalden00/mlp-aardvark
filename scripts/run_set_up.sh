@@ -1,0 +1,1 @@
+python -W ignore ecephys-download.py; python trajectory-extraction.py; python regression_tests.py
