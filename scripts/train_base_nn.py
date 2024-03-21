@@ -104,15 +104,15 @@ if __name__ == "__main__":
         with tqdm.tqdm(range(num_epochs)) as pbar:
             for epoch in pbar:
                 train_loss = []
-                for n in range(0, 80, 4):
-                    batch = X_train[n : n + 4]
+                for n in torch.randperm(40) * 2:
+                    batch = X_train[n - 1 : n]
                     # Train data + Optim
                     # print(X_train.shape)
-                    out = model.forward(batch).reshape(*y_train[n : n + 4].shape)
+                    out = model.forward(batch).reshape(*y_train[n - 1 : n].shape)
 
                     optimizer.zero_grad()
 
-                    l_train = loss(out, y_train[n : n + 4])
+                    l_train = loss(out, y_train[n - 1 : n])
                     l_train.backward()
 
                     optimizer.step()
