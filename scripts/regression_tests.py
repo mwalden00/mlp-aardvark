@@ -12,18 +12,16 @@ import torch
 with open("../data/processed/traj_and_pupil_data.pkl", "rb") as f:
     data = pkl.load(f)
 
-X = np.concatenate(data["trajectories"], axis=1).T
-y = np.concatenate(data["pupil area"])
+X = np.concatenate(data["trajectories"][:80, :100, :])
+y = np.concatenate(np.stack(data["pupil area"])[:80, :100])
 
-pipeline_xgb = Pipeline([("scaler", MinMaxScaler()), ("regressor", XGBRegressor())])
+pipeline_xgb = Pipeline([("regressor", XGBRegressor())])
 pipeline_xgb_params = pipeline_xgb.get_params().keys()
 
-pipeline_rf = Pipeline(
-    [("scaler", MinMaxScaler()), ("regressor", RandomForestRegressor())]
-)
+pipeline_rf = Pipeline([("regressor", RandomForestRegressor())])
 pipeline_rf_params = pipeline_rf.get_params().keys()
 
-pipeline_ridge = Pipeline([("scaler", MinMaxScaler()), ("regressor", Ridge())])
+pipeline_ridge = Pipeline([("regressor", Ridge())])
 pipeline_ridge_params = pipeline_ridge.get_params().keys()
 
 hyperparameter_grid_xgb = {
@@ -74,9 +72,9 @@ random_cv_ridge = GridSearchCV(
     return_train_score=True,
 )
 
-random_cv_xgb.fit(X[:-150], y[:-150])
-random_cv_rf.fit(X[:-150], y[:-150])
-random_cv_ridge.fit(X[:-150], y[:-150])
+random_cv_xgb.fit(X, y)
+random_cv_rf.fit(X, y)
+random_cv_ridge.fit(X, y)
 
 print(
     f"Best xgboost: {random_cv_xgb.best_estimator_} | Score: {random_cv_xgb.best_score_}"

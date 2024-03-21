@@ -26,16 +26,22 @@ lstm_ridge = get_model("../models/nn_models/ridge_lstm.pkl")
 with open("../data/processed/traj_and_pupil_data.pkl", "rb") as f:
     data = pkl.load(f)
 
-X = torch.Tensor(np.concatenate(data["trajectories"], axis=1).T).reshape(100, 150, 13)[
-    :, :100, :
-]
+with open("./scaler.pkl", "rb") as f:
+    scaler = pkl.load(f)
+
+X = np.concatenate(data["trajectories"], axis=1).T.reshape(100, 150, 13)[:, :100, :]
+X = torch.Tensor(
+    scaler.transform(X=X.reshape((X.shape[0] * X.shape[1], X.shape[2]))).reshape(
+        X.shape
+    )
+)
 y = torch.Tensor(np.concatenate(data["pupil area"])).reshape(100, 150)[:, :100]
 
-X_train = X[:60]
-X_val = X[60:]
+X_train = X[:80]
+X_val = X[80:]
 
-y_train = y[:60]
-y_val = y[60:]
+y_train = y[:80]
+y_val = y[80:]
 
 # Get regression friendly shapes
 X_train_reg = X_train.reshape((X_train.shape[0] * X_train.shape[1]), X_train.shape[2])
@@ -121,11 +127,11 @@ stacked_y_train = get_stacked_data_pred(X_train, X_train_reg, y_train_reg)
 ens_cv.fit(stacked_y_train, y_train_reg)
 
 ens_reg = ens_cv.best_estimator_
-ens_reg.fit(stacked_y_train, y_train_reg)
+ens_reg.fit(stacked_y_train[:, :4], y_train_reg)
 reg_ens_reg.fit(stacked_y_train[:, 4:], y_train_reg)
 
 stacked_y_val = get_stacked_data_pred(X_val, X_val_reg, y_val_reg)
-y_val_pred = ens_reg.predict(stacked_y_val)
+y_val_pred = ens_reg.predict(stacked_y_val[:, :4])
 y_val_pred_reg = reg_ens_reg.predict(stacked_y_val[:, 4:])
 
 with open("../models/ensemble.pkl", "wb") as f:

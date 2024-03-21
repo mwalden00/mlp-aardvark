@@ -4,7 +4,8 @@ from elephant.gpfa import GPFA
 import quantities as pq
 import pandas as pd
 import copy
-from sklearn.preprocessing import robust_scale
+from sklearn.preprocessing import minmax_scale
+from torch import randperm
 
 with open("../data/processed/spike_train_trials_drifting_gratings.pkl", "rb") as f:
     spike_train_trials = pkl.load(f)
@@ -13,7 +14,14 @@ with open("../data/processed/pupil_data.pkl", "rb") as f:
 
 gpfa = GPFA(bin_size=20 * pq.ms, x_dim=13)
 
-traj_data = gpfa.fit_transform(spiketrains=[trial for (trial, _) in spike_train_trials])
+perm = randperm(100).numpy()
+
+traj_data = minmax_scale(
+    np.concatenate(
+        gpfa.fit_transform(spiketrains=[trial for (trial, _) in spike_train_trials]),
+        axis=1,
+    ).T
+).reshape(100, 150, 13)[perm]
 
 bucket_lists = [buckets for (_, buckets) in spike_train_trials]
 
@@ -26,6 +34,7 @@ def get_nearest_val(s1, s2):
 pupil_lists = copy.deepcopy(bucket_lists)
 for i, buckets in enumerate(bucket_lists):
     pupil_lists[i] = get_nearest_val(buckets, pupil_data)
+pupil_lists = np.stack(pupil_lists)[perm]
 
 traj_pupil_data = {"trajectories": traj_data, "pupil area": pupil_lists}
 with open("../data/processed/traj_and_pupil_data.pkl", "wb") as f:

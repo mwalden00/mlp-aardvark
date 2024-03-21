@@ -1,4 +1,5 @@
 from sklearn.linear_model import Ridge
+from sklearn.preprocessing import MinMaxScaler
 import pickle as pkl
 import numpy as np
 import torch
@@ -26,18 +27,16 @@ if __name__ == "__main__":
         device = f"cuda:{cuda}"
 
     with torch.device(device):
-
         # Get batched data (batched by stim exposure); remove the last 50 entries of each batch (to remove drift)
-        X = torch.Tensor(np.concatenate(data["trajectories"], axis=1).T).reshape(
-            100, 150, 13
-        )[:, :100, :]
-        y = torch.Tensor(np.concatenate(data["pupil area"])).reshape(100, 150)[:, :100]
 
-        X_train = X[:60]
-        X_val = X[60:]
+        X = torch.Tensor(data["trajectories"])[:, :100, :]
+        y = torch.Tensor(np.stack(data["pupil area"]))[:, :100]
 
-        y_train = y[:60]
-        y_val = y[60:]
+        X_train = X[:80]
+        X_val = X[80:]
+
+        y_train = y[:80]
+        y_val = y[80:]
 
         loss = nn.L1Loss()
 
@@ -104,22 +103,23 @@ if __name__ == "__main__":
 
         with tqdm.tqdm(range(num_epochs)) as pbar:
             for epoch in pbar:
-                # Train data + Optim
-                # print(X_train.shape)
-                out = model.forward(X_train).reshape(*y_train.shape)
-                if ens and not pipe:
-                    ens_out = reg.predict(X_train.reshape(*train_shape))
-                    true_out = lin(torch.stack((out, ens_out), axis=1))
+                train_loss = []
+                for n in range(0, 80, 4):
+                    batch = X_train[n : n + 4]
+                    # Train data + Optim
+                    # print(X_train.shape)
+                    out = model.forward(batch).reshape(*y_train[n : n + 4].shape)
 
-                optimizer.zero_grad()
+                    optimizer.zero_grad()
 
-                l_train = loss(out, y_train)
-                l_train.backward()
+                    l_train = loss(out, y_train[n : n + 4])
+                    l_train.backward()
 
-                optimizer.step()
-                lr_schedular.step()
+                    optimizer.step()
+                    lr_schedular.step()
 
-                train_losses.append(l_train.cpu().item())
+                    train_loss.append(l_train.cpu().item())
+                train_losses.append(train_loss)
 
                 # Validation data
                 out = model.forward(X_val).reshape(*y_val.shape)
